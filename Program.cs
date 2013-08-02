@@ -1,6 +1,13 @@
 ﻿/**
  * GeekNights CUU - App for ViveBus
  * Module by @eaplmx
+ * 
+ * TO DO:
+ * - Select when you have to get out of the Bus route to change path
+ * - Change the strings to translatable table
+ * - Fuzzy search in venues names
+ * - Organize the code (Don't repeat yourself!)
+ * - Add licences and credits for the code
  */
 
 using System;
@@ -23,13 +30,23 @@ namespace ViveBus
 			string executable_path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
 			string places_file_path = executable_path + System.IO.Path.DirectorySeparatorChar + "stations.csv";
-			List<Geo.Place> places = Geo.loadPlacesFromCSV(places_file_path);
+			List<Geo.Station> places = Geo.loadPlacesFromCSV(places_file_path);
 
 			string nodes_file_path = executable_path + System.IO.Path.DirectorySeparatorChar + "nodes.csv";
 			List<Geo.Node> nodes = Geo.loadNodesFromCSV(nodes_file_path);
 
 			string venues_file_path = executable_path + System.IO.Path.DirectorySeparatorChar + "venues.csv";
 			List<Geo.Venue> venues = Geo.loadVenuesFromCSV(venues_file_path);
+
+			Console.WriteLine("Bienvenido a ViveBus app");
+			Console.WriteLine("------------------------");
+			Console.WriteLine("Introduce un lugar público cerca de donde estás en este momento ");
+			Console.WriteLine("y un lugar cerca de tu destino");
+			Console.WriteLine();
+			Console.WriteLine("Te mostraré la ruta de ViveBus más cercana");
+			Console.WriteLine();
+			Console.WriteLine("Para más ayuda has click en el ícono de ayuda (si lo encuentras)");
+			Console.WriteLine("------------------------");
 
 			// Save the distances between each place, to set the weight for the edges
 			// Only run this once to generate the table
@@ -46,20 +63,16 @@ namespace ViveBus
 
 			string station_name = string.Empty;
 
+			Console.WriteLine("");
 			Console.WriteLine("¿Dónde estás?");
 
 			bool found_venues = false;
 			List<Geo.Venue> origin_venues = new List<Geo.Venue>();
-			
 
 			while (found_venues == false)
 			{
-				string origin_venue = Console.ReadLine();
-
-				Console.WriteLine("");
-				Console.WriteLine("Encontré los siguientes lugares, selecciona uno:");
-
 				// Get input from the user, which is your selection?
+				string origin_venue = Console.ReadLine();
 				origin_venues = searchVenues(origin_venue, venues);
 
 				if (origin_venues.Count == 0)
@@ -68,6 +81,8 @@ namespace ViveBus
 				}
 				else
 				{
+					Console.WriteLine("Encontré los siguientes lugares, selecciona uno:");
+					Console.WriteLine("Escribe el número");
 					found_venues = true;
 				}
 			}
@@ -94,29 +109,45 @@ namespace ViveBus
 				else
 				{
 					Console.SetCursorPosition(0, Console.CursorTop - 1);
+					Console.WriteLine();
+					Console.SetCursorPosition(0, Console.CursorTop - 1);
 				}
 			}
 
-			Geo.Point origin = origin_venue_selected.coordinates;
+			Geo.Point origin_point = origin_venue_selected.coordinates;
 
-			Console.WriteLine("");
+			Console.WriteLine();
 			Console.WriteLine("¿A dónde quieres llegar?");
 
-			// DRY - F***!!!
-			string destination_venue = Console.ReadLine();
+			// DRY - F***!!! Fix this
+			// This is a copy-paste from the code above
+			found_venues = false;
+			while (found_venues == false)
+			{
+				// Get input from the user, which is your selection?
+				string origin_venue = Console.ReadLine();
+				origin_venues = searchVenues(origin_venue, venues);
 
-			Console.WriteLine("");
-			Console.WriteLine("Encontré los siguientes lugares, selecciona uno:");
+				if (origin_venues.Count == 0)
+				{
+					Console.WriteLine("No encontré lugares con ese nombre, intenta otro");
+				}
+				else
+				{
+					Console.WriteLine("Encontré los siguientes lugares, selecciona uno:");
+					Console.WriteLine("Escribe el número");
+					found_venues = true;
+				}
+			}
 
-			current_venue_num = 1;
-			origin_venues = searchVenues(destination_venue, venues);
+			current_venue_num = 1; // The list starts with 1
 			foreach (Geo.Venue current_venue in origin_venues)
 			{
 				Console.WriteLine(current_venue_num + " - " + current_venue.name);
 				++current_venue_num;
 			}
 
-			Geo.Venue destination_venue_selected = new Geo.Venue();
+			origin_venue_selected = new Geo.Venue();
 			invalid_selection = true;
 			while (invalid_selection)
 			{
@@ -125,24 +156,27 @@ namespace ViveBus
 				int.TryParse(selected_origin_string, out selected_origin);
 				if (selected_origin > 0 && (selected_origin - 1) < origin_venues.Count)
 				{
-					destination_venue_selected = origin_venues[selected_origin - 1];
+					origin_venue_selected = origin_venues[selected_origin - 1];
 					invalid_selection = false;
 				}
 				else
 				{
 					Console.SetCursorPosition(0, Console.CursorTop - 1);
+					Console.WriteLine();
+					Console.SetCursorPosition(0, Console.CursorTop - 1);
 				}
 			}
 
-			Geo.Point destination = destination_venue_selected.coordinates;
+			Geo.Point destination = origin_venue_selected.coordinates;
 
 			Console.WriteLine("---------------------");
 
 			// Get the distances to all the stations
-			KeyValuePair<int, double> lowest_distance = Geo.getLowestDistanceId(origin, places);
+			KeyValuePair<int, double> lowest_distance = Geo.getLowestDistanceId(origin_point, places);
 			int origin_id = lowest_distance.Key;
 
-			foreach (Geo.Place place in places)
+			// Find the station closer to this destination
+			foreach (Geo.Station place in places)
 			{
 				if (place.id == lowest_distance.Key)
 				{
@@ -153,7 +187,7 @@ namespace ViveBus
 			Console.WriteLine("Ve en alfombra voladora ");
 			distance = lowest_distance.Value;
 			Console.WriteLine(Geo.getDistanceString(distance));
-			Console.WriteLine("hasta");
+			Console.WriteLine("hasta ");
 			Console.WriteLine(station_name);
 
 			station_name = string.Empty;
@@ -161,7 +195,7 @@ namespace ViveBus
 
 			int destination_id = lowest_distance.Key;
 
-			foreach (Geo.Place place in places)
+			foreach (Geo.Station place in places)
 			{
 				if (place.id == lowest_distance.Key)
 				{
@@ -170,7 +204,7 @@ namespace ViveBus
 			}
 
 			Console.WriteLine();
-			Console.WriteLine("baja en");
+			Console.WriteLine("baja en ");
 			Console.WriteLine(station_name);
 			Console.WriteLine();
 			Console.WriteLine("y teletranspórtate ");
@@ -180,10 +214,11 @@ namespace ViveBus
 
 			Console.WriteLine("hasta tu destino ");
 
+			// Now we'll get the shortest path between stations
 			Graph graph = new Graph();
 			Dictionary<int, Vector2D> resultIndexVertexMapping = new Dictionary<int, Vector2D>();
 
-			foreach (Geo.Place current_place in places)
+			foreach (Geo.Station current_place in places)
 			{
 				graph.AddVertex(new Vector2D(0, 0, false, current_place.id));
 			}
@@ -208,7 +243,7 @@ namespace ViveBus
 
 			foreach (Vector2D current_vector in path)
 			{
-				foreach (Geo.Place place in places)
+				foreach (Geo.Station place in places)
 				{
 					if (place.id == current_vector.VertexID)
 					{
@@ -218,32 +253,9 @@ namespace ViveBus
 				}
 			}
 
-
-			string clientId = "CLIENT_ID";
-			string clientSecret = "CLIEND_SECRET";
-			string redirectUri = "REDIRECT_URI";
-			//SharpSquare sharpSquare = new SharpSquare(clientId, clientSecret);
-                    
 			/*
-			if (Request["code"] != null)
-			{
-				sharpSquare.GetAccessToken(redirectUri, Request["code"]);
-				// Here, you can do something
-			}
-			else
-			{
-				HyperLink.NavigateUrl = sharpSquare.GetAuthenticateUrl(redirectUri);
-			}  
-			 * */
-                    
-			Dictionary<string, string> parameters = new Dictionary<string, string>();
-			parameters.Add("ll", "44.3,37.2");
-			//List<Geo.Venue> venues = sharpSquare.SearchVenues(parameters);
-
-
-			/*
-			string sNew = "Plaza Galerias";
-			string sOld = "galerias";
+			string sNew = "Vive Bus";
+			string sOld = "vivebus";
 
 			try
 			{
@@ -275,9 +287,12 @@ namespace ViveBus
 			}
 			 */
 
+			Console.WriteLine();
+			Console.Write("Cualquier tecla para salir");
 			Console.ReadKey();
 		}
 
+		// TO DO: Move this to the controller
 		public static Vector2D getVectorFromId(int id, List<Vector2D> nodes)
 		{
 			foreach (Vector2D current_node in nodes)
@@ -301,7 +316,7 @@ namespace ViveBus
 		/// <param name="search_string">Name of the venue to find</param>
 		/// <param name="venues">List of venues to </param>
 		/// <returns>List of venues where the search string is present</returns>
-		public static List<Geo.Venue> searchVenues (string search_string, List<Geo.Venue> venues)
+		public static List<Geo.Venue> searchVenues(string search_string, List<Geo.Venue> venues)
 		{
 			List<Geo.Venue> found_venues = new List<Geo.Venue>();
 			search_string = replaceLatinCharacters(search_string.ToLower());
@@ -389,6 +404,9 @@ namespace ViveBus
 
 	}
 
+	/// <summary>
+	/// Code for fuzzy search (Not implemented yet)
+	/// </summary>
 	public class Levenshtein
 	{
 		///*****************************
@@ -403,14 +421,13 @@ namespace ViveBus
 			int ColIdx;                // iterates through sCol
 			char Row_i;                // ith character of sRow
 			char Col_j;                // jth character of sCol
-			int cost;                   // cost
+			int cost;                  // cost
 
 			/// Test string length
 			if (Math.Max(sRow.Length, sCol.Length) > Math.Pow(2, 31))
 				throw (new Exception("\nMaximum string length in Levenshtein.iLD is " + Math.Pow(2, 31) + ".\nYours is " + Math.Max(sRow.Length, sCol.Length) + "."));
 
 			// Step 1
-
 			if (RowLen == 0)
 			{
 				return ColLen;
@@ -434,8 +451,7 @@ namespace ViveBus
 			}
 
 			// Step 3
-
-			/// Fore each column
+			/// For each column
 			for (ColIdx = 1; ColIdx <= ColLen; ColIdx++)
 			{
 				/// Set the 0'th element to the column number
@@ -445,7 +461,6 @@ namespace ViveBus
 
 
 				// Step 4
-
 				/// Fore each row
 				for (RowIdx = 1; RowIdx <= RowLen; RowIdx++)
 				{
@@ -453,7 +468,6 @@ namespace ViveBus
 
 
 					// Step 5
-
 					if (Row_i == Col_j)
 					{
 						cost = 0;
@@ -464,7 +478,6 @@ namespace ViveBus
 					}
 
 					// Step 6
-
 					/// Find minimum
 					int m_min = v0[RowIdx] + 1;
 					int b = v1[RowIdx - 1] + 1;
@@ -505,7 +518,6 @@ namespace ViveBus
 		///*****************************
 		/// Compute the min
 		///*****************************
-
 		private int Minimum(int a, int b, int c)
 		{
 			int mi = a;
@@ -525,24 +537,22 @@ namespace ViveBus
 		///*****************************
 		/// Compute Levenshtein distance         
 		///*****************************
-
 		public int LD(String sNew, String sOld)
 		{
 			int[,] matrix;              // matrix
 			int sNewLen = sNew.Length;  // length of sNew
 			int sOldLen = sOld.Length;  // length of sOld
-			int sNewIdx; // iterates through sNew
-			int sOldIdx; // iterates through sOld
-			char sNew_i; // ith character of sNew
-			char sOld_j; // jth character of sOld
-			int cost; // cost
+			int sNewIdx;					// iterates through sNew
+			int sOldIdx;					// iterates through sOld
+			char sNew_i;					// ith character of sNew
+			char sOld_j;					// jth character of sOld
+			int cost;					// cost
 
 			/// Test string length
 			if (Math.Max(sNew.Length, sOld.Length) > Math.Pow(2, 31))
 				throw (new Exception("\nMaximum string length in Levenshtein.LD is " + Math.Pow(2, 31) + ".\nYours is " + Math.Max(sNew.Length, sOld.Length) + "."));
 
 			// Step 1
-
 			if (sNewLen == 0)
 			{
 				return sOldLen;
@@ -556,7 +566,6 @@ namespace ViveBus
 			matrix = new int[sNewLen + 1, sOldLen + 1];
 
 			// Step 2
-
 			for (sNewIdx = 0; sNewIdx <= sNewLen; sNewIdx++)
 			{
 				matrix[sNewIdx, 0] = sNewIdx;
@@ -568,19 +577,16 @@ namespace ViveBus
 			}
 
 			// Step 3
-
 			for (sNewIdx = 1; sNewIdx <= sNewLen; sNewIdx++)
 			{
 				sNew_i = sNew[sNewIdx - 1];
 
 				// Step 4
-
 				for (sOldIdx = 1; sOldIdx <= sOldLen; sOldIdx++)
 				{
 					sOld_j = sOld[sOldIdx - 1];
 
 					// Step 5
-
 					if (sNew_i == sOld_j)
 					{
 						cost = 0;
@@ -591,9 +597,7 @@ namespace ViveBus
 					}
 
 					// Step 6
-
 					matrix[sNewIdx, sOldIdx] = Minimum(matrix[sNewIdx - 1, sOldIdx] + 1, matrix[sNewIdx, sOldIdx - 1] + 1, matrix[sNewIdx - 1, sOldIdx - 1] + cost);
-
 				}
 			}
 
@@ -606,4 +610,5 @@ namespace ViveBus
 			return (100 * matrix[sNewLen, sOldLen]) / max;
 		}
 	}
+
 }

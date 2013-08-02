@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+//using System.Linq;
 using System.Text;
 using System.Collections;
 
@@ -283,16 +283,7 @@ namespace Dijkstras_Algorithm
             // Set the cost on the source node to 0 and flag it as visited
             _sourceNode.AggregateCost = 0;
 
-            
-            // if the targetnode is not the sourcenode
-            // if (_targetNode.AggregateCost == Vector2D.INFINITY) {
-                // Start the traversal across the graph
             this.PerformCalculationForAllNodes();
-            //}
-            
-
-            //_totalCost = _targetNode.AggregateCost;
-
 
             if (destUnreachable)
             {

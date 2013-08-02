@@ -18,7 +18,7 @@ namespace ViveBus
 			}
 		}
 
-		public struct Place
+		public struct Station
 		{
 			public int id;
 			public string name;
@@ -62,6 +62,12 @@ namespace ViveBus
 			return (rad / Math.PI * 180.0);
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="distance"></param>
+		/// <returns></returns>
+		// TO DO: Allow translatable strings
 		public static string getDistanceString(double distance)
 		{
 			if (distance < 1)
@@ -75,11 +81,11 @@ namespace ViveBus
 			}
 		}
 
-		public static KeyValuePair<int, double> getLowestDistanceId(Point origin, List<Place> places)
+		public static KeyValuePair<int, double> getLowestDistanceId(Point origin, List<Station> places)
 		{
 			KeyValuePair<int, double> lowest_distance = new KeyValuePair<int, double>(0, double.MaxValue);
 			Dictionary<int, double> distances = new Dictionary<int, double>();
-			foreach (Geo.Place place in places)
+			foreach (Geo.Station place in places)
 			{
 				double current_distance = Geo.Distance(origin, place.coordinates);
 				distances.Add(place.id, current_distance);
@@ -93,9 +99,9 @@ namespace ViveBus
 			return lowest_distance;
 		}
 
-		public static List<Place> loadPlacesFromCSV(string file_path)
+		public static List<Station> loadPlacesFromCSV(string file_path)
 		{
-			List<Place> places = new List<Place>();
+			List<Station> places = new List<Station>();
 			
 			string[] csv_lines = System.IO.File.ReadAllLines(file_path);
 			int csv_lines_num = csv_lines.Length;
@@ -105,7 +111,7 @@ namespace ViveBus
 				{
 					string[] parts = csv_lines[current_line].Split(',');
 
-					Geo.Place place = new Geo.Place();
+					Geo.Station place = new Geo.Station();
 					int.TryParse(parts[0], out place.id);
 					place.name = parts[1];
 
@@ -177,7 +183,7 @@ namespace ViveBus
 			return venues;
 		}
 
-		public static List<Node> getWeightFromDistances(List<Place> places, List<Node> nodes)
+		public static List<Node> getWeightFromDistances(List<Station> places, List<Node> nodes)
 		{
 			List<Node> nodes_with_distances = new List<Node>();
 			foreach (Node current_node in nodes)
@@ -210,11 +216,10 @@ namespace ViveBus
 			System.IO.File.WriteAllLines(file_path, lines.ToArray());
 		}
 
-		public static Point getPlaceFromId(int id, List<Place> places)
+		public static Point getPlaceFromId(int id, List<Station> places)
 		{
 			// TO DO: Use search instead
-
-			foreach (Place current_place in places)
+			foreach (Station current_place in places)
 			{
 				if (current_place.id == id)
 				{
